@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """The One-Line Excuse an Agent Gives Its Human — entry program.
 
-Writes one hand-written excuse line to /output/entry.txt (or
-$OUTPUT_DIR/entry.txt). The line is fixed: it never changes between
-runs, and the program refuses to write it unless it satisfies the
-competition gate first — UTF-8 text of 1-160 characters, not only
-whitespace, all on one line.
+Writes one hand-written excuse line to ``/output/entry.txt`` (or
+``$OUTPUT_DIR/entry.txt``). The line is fixed: it never changes
+between runs. Before writing, the program checks the line against
+the competition gate — UTF-8 text of 1-160 characters, not only
+whitespace, all on one line — and refuses to write it unless the
+gate passes.
 """
 
 import os
@@ -21,26 +22,32 @@ GATE_MAX = 160
 
 
 def gate_problems(text):
-    """List every way `text` breaks the gate; [] means it passes."""
+    """Return a list of every way `text` breaks the gate ([] = pass)."""
     problems = []
     if not text.strip():
         problems.append("entry is blank or only whitespace")
-    if not GATE_MIN <= len(text) <= GATE_MAX:
+    length = len(text)
+    if length < GATE_MIN or length > GATE_MAX:
         problems.append(
             "entry is %d characters, gate needs %d-%d"
-            % (len(text), GATE_MIN, GATE_MAX)
+            % (length, GATE_MIN, GATE_MAX)
         )
     if "\n" in text or "\r" in text:
         problems.append("entry must be a single line")
     return problems
 
 
+def report(problems, where=""):
+    """Print each gate problem to stderr; return exit code 1."""
+    for problem in problems:
+        print("gate failure%s: %s" % (where, problem), file=sys.stderr)
+    return 1
+
+
 def write_entry():
     problems = gate_problems(EXCUSE)
     if problems:
-        for problem in problems:
-            print("gate failure: " + problem, file=sys.stderr)
-        return 1
+        return report(problems)
 
     out_dir = os.environ.get("OUTPUT_DIR", "/output")
     os.makedirs(out_dir, exist_ok=True)
@@ -55,9 +62,7 @@ def write_entry():
         return 1
     problems = gate_problems(on_disk)
     if problems:
-        for problem in problems:
-            print("gate failure on disk: " + problem, file=sys.stderr)
-        return 1
+        return report(problems, " on disk")
 
     print(
         "Wrote entry.txt: %d characters (%d bytes)"
